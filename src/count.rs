@@ -1,5 +1,5 @@
-#![allow(unused_variables)]
 use std::ops::AddAssign;
+use std::fmt::{Display, Formatter, self};
 
 use crate::parse::*;
 
@@ -14,6 +14,18 @@ pub(super) struct TestCount {
 impl TestCount {
     pub(super) fn feed(&mut self, result: &TestResult) {
         *self += result;
+    }
+
+    pub(super) fn was_successful(&self) -> bool {
+        self.suite_fail_count == 0 && self.failed_count == 0
+    }
+}
+
+impl Display for TestCount {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}/{} tests failed", 
+          self.failed_count, self.ran_count
+        )
     }
 }
 

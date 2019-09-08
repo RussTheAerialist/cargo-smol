@@ -3,7 +3,7 @@ use std::ops::AddAssign;
 use crate::parse::*;
 
 #[derive(Debug, Default)]
-pub(super) struct FailedTests(Vec<String>);
+pub(super) struct FailedTests(pub(crate) Vec<String>);
 
 impl FailedTests {
     pub(super) fn feed(&mut self, result: &TestResult) {
