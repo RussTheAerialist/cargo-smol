@@ -1,6 +1,6 @@
 [package]
 name = "cargo-smol"
-version = "0.1.2-alpha.0"
+version = "0.1.2"
 authors = ["rhay <me@russellhay.com>"]
 edition = "2018"
 description = "A cargo command that wraps cargo-test and uses the JSON output to give a summary"
