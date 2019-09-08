@@ -4,8 +4,8 @@ version = "0.1.2-alpha.0"
 authors = ["rhay <me@russellhay.com>"]
 edition = "2018"
 description = "A cargo command that wraps cargo-test and uses the JSON output to give a summary"
-repository = "https://github.com/RussTheAerialist"
-homepage = "https://github.com/RussTheAerialist"
+repository = "https://github.com/RussTheAerialist/cargo-smol"
+homepage = "https://github.com/RussTheAerialist/cargo-smol"
 license = "MIT"
 
 [dependencies]
