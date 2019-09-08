@@ -6,6 +6,7 @@ edition = "2018"
 description = "A cargo command that wraps cargo-test and uses the JSON output to give a summary"
 repository = "https://github.com/RussTheAerialist"
 homepage = "https://github.com/RussTheAerialist"
+license = "MIT"
 
 [dependencies]
 serde = "*"
