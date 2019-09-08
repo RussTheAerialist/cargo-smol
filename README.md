@@ -8,11 +8,11 @@ Typically, `smol` is paired with `watch` so that it gets rerun whenever a file c
 
 If all of your tests are passing, this should show up:
 
-![screenshot of smol in action]()
+![screenshot of smol in action](https://raw.githubusercontent.com/RussTheAerialist/cargo-smol/master/smol.png)
 
 If you have a test failure, you should see something like this:
 
-![screenshot of smol with a couple of failed test cases]()
+![screenshot of smol with a couple of failed test cases](https://raw.githubusercontent.com/RussTheAerialist/cargo-smol/master/smol-fail.png)
 
 `smol` will only show as many test cases as can fit into the size of the window it's in. Any additional tests will not be listed, but will be
 included in the test summary status line.
