@@ -3,6 +3,7 @@ use std::process::Command;
 use termion::{clear, color, cursor, style};
 use std::io::{Write, stdout, Stdout};
 use std::convert::TryInto;
+use chrono::prelude::*;
 
 mod parse;
 mod count;
@@ -49,7 +50,7 @@ fn output_failed_tests(out: &mut Stdout, failed: &FailedTests, height: u16) -> R
     write!(out, "{}", cursor::Goto(1, 2))?;
     let test_count_to_display : usize = (height - 2).try_into().map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, ""))?;
     failed.0.iter().take(test_count_to_display).for_each(|item| {
-        if let(Ok(_)) = writeln!(out, "{}", item) {
+        if let Ok(_) = writeln!(out, "{}", item) {
         }
     });
 
@@ -63,10 +64,12 @@ fn setup_console() -> Result<Stdout, std::io::Error> {
 }
 
 fn finish(out: &mut Stdout, height: u16) -> Result<(), std::io::Error> {
-    let last_line = height-1;
-    write!(out, "{reset}{goto}",
+    let last_line = height-2;
+    let current_time = Local::now();
+    write!(out, "{reset}{goto}last run: {current_time}\n",
         reset = style::Reset,
-        goto = cursor::Goto(1, last_line)
+        goto = cursor::Goto(1, last_line),
+        current_time = current_time
     )?;
     out.flush()?;
     Ok(())
