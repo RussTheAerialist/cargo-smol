@@ -1,17 +1,17 @@
+use chrono::prelude::*;
 use serde_json::from_str;
+use std::convert::TryInto;
+use std::io::{stdout, Stdout, Write};
 use std::process::Command;
 use termion::{clear, color, cursor, style};
-use std::io::{Write, stdout, Stdout};
-use std::convert::TryInto;
-use chrono::prelude::*;
 
-mod parse;
 mod count;
 mod failed;
+mod parse;
 
-use parse::*;
 use count::*;
 use failed::*;
+use parse::*;
 
 fn feed(count: &mut TestCount, failed: &mut FailedTests, new_results: &TestResult) {
     count.feed(new_results);
@@ -19,40 +19,55 @@ fn feed(count: &mut TestCount, failed: &mut FailedTests, new_results: &TestResul
 }
 
 fn status(out: &mut Stdout, msg: &str) -> Result<(), std::io::Error> {
-    write!(out, "{goto}{fg}{bg}{clear}{msg}{fre}{bre}",
-           goto = cursor::Goto(1,1),
-           fg = color::Fg(color::White),
-           bg = color::Bg(color::Blue),
-           clear = clear::CurrentLine,
-           msg = msg,
-           fre = color::Fg(color::Reset),
-           bre = color::Bg(color::Reset)
+    write!(
+        out,
+        "{goto}{fg}{bg}{clear}{msg}{fre}{bre}",
+        goto = cursor::Goto(1, 1),
+        fg = color::Fg(color::White),
+        bg = color::Bg(color::Blue),
+        clear = clear::CurrentLine,
+        msg = msg,
+        fre = color::Fg(color::Reset),
+        bre = color::Bg(color::Reset)
     )?;
     out.flush()?;
     Ok(())
 }
 
 fn output_summary(out: &mut Stdout, result: &TestCount) -> Result<(), std::io::Error> {
-    write!(out, "{goto}{fg}{bg}{clear}{msg}{fre}{bre}",
-      goto = cursor::Goto(1,1),
-      fg = color::Fg(color::White),
-      bg = if result.was_successful() { color::Bg(color::Blue).to_string() } else { color::Bg(color::Red).to_string() },
-      clear = clear::CurrentLine,
-      msg = result,
-      fre = color::Fg(color::Reset),
-      bre = color::Bg(color::Reset)
+    write!(
+        out,
+        "{goto}{fg}{bg}{clear}{msg}{fre}{bre}",
+        goto = cursor::Goto(1, 1),
+        fg = color::Fg(color::White),
+        bg = if result.was_successful() {
+            color::Bg(color::Blue).to_string()
+        } else {
+            color::Bg(color::Red).to_string()
+        },
+        clear = clear::CurrentLine,
+        msg = result,
+        fre = color::Fg(color::Reset),
+        bre = color::Bg(color::Reset)
     )?;
 
     Ok(())
 }
 
-fn output_failed_tests(out: &mut Stdout, failed: &FailedTests, height: u16) -> Result<(), std::io::Error> {
+fn output_failed_tests(
+    out: &mut Stdout,
+    failed: &FailedTests,
+    height: u16,
+) -> Result<(), std::io::Error> {
     write!(out, "{}", cursor::Goto(1, 2))?;
-    let test_count_to_display : usize = (height - 2).try_into().map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, ""))?;
-    failed.0.iter().take(test_count_to_display).for_each(|item| {
-        if let Ok(_) = writeln!(out, "{}", item) {
-        }
-    });
+    let test_count_to_display: usize = (height - 2)
+        .try_into()
+        .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, ""))?;
+    failed
+        .0
+        .iter()
+        .take(test_count_to_display)
+        .for_each(|item| if let Ok(_) = writeln!(out, "{}", item) {});
 
     Ok(())
 }
@@ -64,9 +79,11 @@ fn setup_console() -> Result<Stdout, std::io::Error> {
 }
 
 fn finish(out: &mut Stdout, height: u16) -> Result<(), std::io::Error> {
-    let last_line = height-2;
+    let last_line = height - 2;
     let current_time = Local::now();
-    write!(out, "{reset}{goto}last run: {current_time}\n",
+    write!(
+        out,
+        "{reset}{goto}last run: {current_time}\n",
         reset = style::Reset,
         goto = cursor::Goto(1, last_line),
         current_time = current_time
@@ -78,7 +95,7 @@ fn finish(out: &mut Stdout, height: u16) -> Result<(), std::io::Error> {
 fn main() -> Result<(), std::io::Error> {
     let mut console = setup_console()?;
     let terminal_size = termion::terminal_size()?;
-    let height : u16 = terminal_size.1;
+    let height: u16 = terminal_size.1;
 
     status(&mut console, "Running Tests...")?;
     let testproc = Command::new("cargo")
@@ -91,15 +108,17 @@ fn main() -> Result<(), std::io::Error> {
         .output()
         .expect("Unable to run cargo test");
 
-
-    let lines = std::str::from_utf8(&testproc.stdout).expect("Unable to process output, non-utf8 characters outputted");
+    let lines = std::str::from_utf8(&testproc.stdout)
+        .expect("Unable to process output, non-utf8 characters outputted");
     let mut failed_tests = FailedTests::default();
-    let results = lines.split("\n").fold(TestCount::default(), |mut acc, line| {
-        if let Ok(result) = from_str::<TestResult>(&line) {
-            feed(&mut acc, &mut failed_tests, &result);
-        }
-        acc
-    });
+    let results = lines
+        .split("\n")
+        .fold(TestCount::default(), |mut acc, line| {
+            if let Ok(result) = from_str::<TestResult>(&line) {
+                feed(&mut acc, &mut failed_tests, &result);
+            }
+            acc
+        });
     output_summary(&mut console, &results)?;
     output_failed_tests(&mut console, &failed_tests, height)?;
     finish(&mut console, height)?;
