@@ -1,12 +1,10 @@
+use std::fmt::{self, Display, Formatter};
 use std::ops::AddAssign;
-use std::fmt::{Display, Formatter, self};
 
 use crate::parse::*;
 
 #[derive(Debug, Default, Clone, Copy)]
 pub(super) struct TestCount {
-    pub suite_count: u32,
-    pub suite_fail_count: u32,
     pub ran_count: u32,
     pub failed_count: u32,
 }
@@ -17,42 +15,35 @@ impl TestCount {
     }
 
     pub(super) fn was_successful(&self) -> bool {
-        self.suite_fail_count == 0 && self.failed_count == 0
+        self.failed_count == 0 && self.ran_count > 0
     }
 }
 
 impl Display for TestCount {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}/{} tests failed", 
-          self.failed_count, self.ran_count
-        )
+        if self.was_successful() {
+            write!(f, "{} tests passed", self.ran_count)
+        } else {
+            write!(f, "{}/{} tests failed", self.failed_count, self.ran_count)
+        }
     }
 }
 
 impl AddAssign<&TestResult> for TestCount {
-   fn add_assign(&mut self, rhs: &TestResult) {
-       match rhs { 
-           TestResult::Suite { event } => {
-               match event {
-                   SuiteEvent::Started { test_count: _ } => {},
-                   SuiteEvent::Passed { counts } => {
-                       self.suite_count += 1;
-                   },
-                   SuiteEvent::Failed { counts } => {
-                       self.suite_count += 1;
-                       self.suite_fail_count += 1;
-                   },
-               }
-           },
-           TestResult::Test { event, name } => {
-               match event { 
-                   TestEvent::Started => { self.ran_count += 1; },
-                   TestEvent::Failed { test_output: _ } => { self.failed_count += 1; },
-                   _ => { },
-               }
-           },
-       }
-   }
+    fn add_assign(&mut self, rhs: &TestResult) {
+        match rhs {
+            TestResult::Test { event, name } => match event {
+                TestEvent::Started => {
+                    self.ran_count += 1;
+                }
+                TestEvent::Failed { test_output: _ } => {
+                    self.failed_count += 1;
+                }
+                _ => {}
+            },
+            _ => {}
+        }
+    }
 }
 
 pub(crate) mod tests {
@@ -61,23 +52,42 @@ pub(crate) mod tests {
     use crate::feed;
     use serde_json::from_str;
 
-    pub const SUITE_STARTED : &str = r#"{ "type": "suite", "event": "started", "test_count": 0 }"#;
-    pub const SUITE_FINISHED_OK : &str = r#"{ "type": "suite", "event": "ok", "passed": 1, "failed": 0, "allowed_fail": 0, "ignored": 2, "measured": 0, "filtered_out": 0 }"#;
-    pub const SUITE_FINISHED_FAILED : &str = r#"{ "type": "suite", "event": "failed", "passed": 2, "failed": 1, "allowed_fail": 0, "ignored": 0, "measured": 0, "filtered_out": 0 }"#;
-
-    pub const TEST_OK : &str = r#"{ "type": "test", "name": "tests::test_ok_parsed_properly", "event": "ok" }"#;
+    pub const TEST_STARTED: &str =
+        r#"{ "type": "test", "event": "started", "name": "tests::we_dont_use_this_value" }"#;
+    pub const TEST_OK: &str =
+        r#"{ "type": "test", "name": "tests::test_ok_parsed_properly", "event": "ok" }"#;
     pub const TEST_FAILED: &str = r#"
     { "type": "test", "name": "tests::test_ok_parsed_properly", "event": "failed",
       "stdout": "thread 'main' panicked at 'assertion failed: `(left == right)`\n  left: `\"tests::test_ok_parsed_properly\"`,\n right: `\"\"`', src/main.rs:117:34\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace.\n" }
     "#;
 
     #[test]
-    fn suite_finished_adds_to_test_count() {
-        let result : TestResult = from_str(SUITE_FINISHED_OK).unwrap();
+    fn test_ok_works() {
+        let started: TestResult = from_str(TEST_STARTED).unwrap();
+        let result: TestResult = from_str(TEST_OK).unwrap();
         let mut count = TestCount::default();
         let mut failed = FailedTests::default();
+
+        feed(&mut count, &mut failed, &started);
         feed(&mut count, &mut failed, &result);
-        assert_eq!(count.ran_count, 1);
-        assert_eq!(count.suite_count, 3);
+
+        println!("{:#?}", count);
+        assert!(count.was_successful());
+        assert_eq!(count.failed_count, 0);
+    }
+
+    #[test]
+    fn test_failed_works() {
+        let started: TestResult = from_str(TEST_STARTED).unwrap();
+        let result: TestResult = from_str(TEST_FAILED).unwrap();
+        let mut count = TestCount::default();
+        let mut failed = FailedTests::default();
+
+        feed(&mut count, &mut failed, &started);
+        feed(&mut count, &mut failed, &result);
+
+        println!("{:#?}", count);
+        assert!(!count.was_successful());
+        assert_eq!(count.failed_count, 1);
     }
 }
